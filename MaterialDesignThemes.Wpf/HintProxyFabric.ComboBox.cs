@@ -1,11 +1,6 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
-using System.Windows.Controls.Primitives;
 
 namespace MaterialDesignThemes.Wpf
 {
@@ -14,24 +9,9 @@ namespace MaterialDesignThemes.Wpf
         private sealed class ComboBoxHintProxy : IHintProxy
         {
             private readonly ComboBox _comboBox;
-            private readonly TextChangedEventHandler _comboBoxTextChangedEventHandler;
+            private readonly DependencyPropertyListener _textChangedListener;
 
-            public object Content
-            {
-                get
-                {
-                    if (_comboBox.IsEditable)
-                    {
-                        return _comboBox.Text;
-                    }
-
-                    ComboBoxItem comboBoxItem = _comboBox.SelectedItem as ComboBoxItem;
-                    return comboBoxItem != null 
-                        ? comboBoxItem.Content
-                        : _comboBox.SelectedItem;
-                }
-            }
-
+            public object Content => _comboBox.Text;
             public bool IsLoaded => _comboBox.IsLoaded;
             public bool IsVisible => _comboBox.IsVisible;
 
@@ -44,16 +24,9 @@ namespace MaterialDesignThemes.Wpf
                 if (comboBox == null) throw new ArgumentNullException(nameof(comboBox));
 
                 _comboBox = comboBox;
-                _comboBoxTextChangedEventHandler = new TextChangedEventHandler(ComboBoxTextChanged);
-                _comboBox.AddHandler(TextBoxBase.TextChangedEvent, _comboBoxTextChangedEventHandler);
-                _comboBox.SelectionChanged += ComboBoxSelectionChanged;
+                _textChangedListener = new DependencyPropertyListener(comboBox, ComboBox.TextProperty, e => ContentChanged?.Invoke(comboBox, EventArgs.Empty));
                 _comboBox.Loaded += ComboBoxLoaded;
                 _comboBox.IsVisibleChanged += ComboBoxIsVisibleChanged;
-            }
-
-            private void ComboBoxSelectionChanged(object sender, SelectionChangedEventArgs e)
-            {
-                ContentChanged?.Invoke(sender, EventArgs.Empty);
             }
 
             private void ComboBoxIsVisibleChanged(object sender, DependencyPropertyChangedEventArgs e)
@@ -66,17 +39,11 @@ namespace MaterialDesignThemes.Wpf
                 Loaded?.Invoke(sender, EventArgs.Empty);
             }
 
-            private void ComboBoxTextChanged(object sender, TextChangedEventArgs e)
-            {
-                ContentChanged?.Invoke(sender, EventArgs.Empty);
-            }
-
             public void Dispose()
             {
-                _comboBox.RemoveHandler(TextBoxBase.TextChangedEvent, _comboBoxTextChangedEventHandler);
                 _comboBox.Loaded -= ComboBoxLoaded;
                 _comboBox.IsVisibleChanged -= ComboBoxIsVisibleChanged;
-                _comboBox.SelectionChanged -= ComboBoxSelectionChanged;
+                _textChangedListener.Dispose();
             }
         }
     }
